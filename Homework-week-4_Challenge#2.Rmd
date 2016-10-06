@@ -1,0 +1,235 @@
+---
+title: "Module-8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#HOMEWORK PROBLEM 2
+**I have used cowplot package in this assignment. It may balk if the package is not installed.**
+
+Using different .Rmd file than you used for Problem 1 pushing both the Markdown and knitted .html file to the same "homework-week-4" repository, do the following:
+
+Load in the dataset "zombies.csv" from my GitHub repo at https://github.com/difiore/ADA2016. This data includes the first and last name and gender of the entire population of 1000 people who have survived the zombie apocalypse and are now ekeing out an existence somewhere on the East Coast, along with several other variables (height, weight, age, number of years of education, number of zombies they have killed, and college major see here for info on major
+
+####[1]Calculate the population mean and standard deviation for each quantitative random variable (height, weight, age, number of zombies killed, and years of education). NOTE: You will not want to use the built in var() and sd() commands as these are for samples.
+
+```{r}
+#File selection
+zombieData <- read.csv("zombies.csv", sep = ",", header = TRUE, stringsAsFactors = FALSE)
+#Defining generic mean and standard deviation functions
+mean_pop <- function(ranVar){return (sum(zombieData[ranVar])/nrow(zombieData))}
+sd_pop <- function(ranVar){return (sqrt(sum((zombieData[ranVar] - mean_pop(ranVar))^2)/nrow(zombieData)))}
+#Height
+mean_height <- mean_pop("height")
+sd_height <- sd_pop("height")
+#Weight
+mean_weight <- mean_pop("weight")
+sd_weight <- sd_pop("weight")
+#Age
+mean_age <- mean_pop("age")
+sd_age <- sd_pop("age")
+#Number of Zombies Killed
+mean_zombies_killed<- mean_pop("zombies_killed")
+sd_zombies_killed <- sd_pop("zombies_killed")
+#Years of Education
+mean_years_of_education <- mean_pop("years_of_education")
+sd_years_of_education <- sd_pop("years_of_education")
+pop_stats <- data.frame(STAT = c("MEAN","SD"), HEIGHT = c(mean_height,sd_height), WEIGHT = c(mean_weight,sd_weight), AGE = c(mean_age,sd_age), Z_KILL = c(mean_zombies_killed,sd_zombies_killed), Y_ED = c(mean_years_of_education,sd_years_of_education))
+#Results
+pop_stats
+
+```
+
+####[2]Use ggplot and make boxplots of each of these variable by gender.
+
+```{r}
+attach(zombieData)
+require(ggplot2)
+require(cowplot)
+plot_a<-ggplot(zombieData,aes(gender,height)) + geom_boxplot(color = "black",fill = "grey", shape = 1 ) + ylab("Height")
+plot_b<-ggplot(zombieData,aes(gender,weight)) + geom_boxplot(color = "black",fill = "grey") + ylab("Weight") 
+plot_c<-ggplot(zombieData,aes(gender,age)) + geom_boxplot(color = "black",fill = "grey") + ylab("Age") 
+plot_d<-ggplot(zombieData,aes(gender,zombies_killed)) + geom_boxplot(color = "black",fill = "grey") + ylab("Zombies_Killed") 
+plot_e<-ggplot(zombieData,aes(gender,years_of_education)) + geom_boxplot(color = "black",fill = "grey") + ylab("Years_of_education")
+plot_grid(plot_a,plot_b,plot_c,plot_d,plot_e, align = 'h')
+```
+
+####[3]Use ggplot and make a scatterplots of height and weight in relation to age. Do these variables seem to be related? In what way?
+``` {r}
+
+sca_plot_a<-ggplot(zombieData, aes(x = age, y = height)) + geom_point() + geom_smooth(method = "lm")
+sca_plot_b<-ggplot(zombieData, aes(x = age,  y = weight)) + geom_point() + geom_smooth(method = "lm")
+plot_grid(sca_plot_a,sca_plot_b,align = 'h')
+```
+
+**The plots signify an increase in height and weight with age. But the increase in height is much more than that of weight as the age increases.**
+
+####[4] Using histograms and Q-Q plots, check whether the quantitative variables seem to be drawn from a normal distribution. Which seem to be and which do not (hint: not all are drawn from the normal distribution)? For those that are not, can you determine what common distribution they are drawn from?
+```{r}
+#Q-Q Plots
+par(mfrow = c(1, 3))
+#Height
+qqnorm(height, main = "QQ Plot for Heights"); qqline(height, col = "red")
+#Weight
+qqnorm(weight, main = "QQ Plot for Weights"); qqline(weight, col = "red")
+#Age
+qqnorm(age, main = "QQ Plot for Age"); qqline(age, col = "red")
+par(mfrow = c(1, 2))
+#Zombies_Killed
+qqnorm(zombies_killed, main = "QQ Plot for zombies killed"); qqline(zombies_killed, col = "red")
+#Years_of_Education
+qqnorm(years_of_education, main = "QQ Plot for years of education"); qqline(years_of_education, col = "red")
+```
+
+**Height, Weight, and Age come from a normal distribution as the plots signify.**
+**Plotting histograms from zombies_killed and years_of_education in order to determine their distribution**
+```{r}
+par(mfrow = c(1, 2))
+hist(zombieData$years_of_education,freq = FALSE,xlab = "years_of_education",main = "Hist for years_of_education")
+hist(zombieData$zombies_killed,freq = FALSE,xlab = "zombies_killed",main = "Hist for zombies_killed")
+```
+
+**These seem to belong to poisson distribution.**
+**If I build a q-q plot for poisson random variables against normal quantiles I get a similar plot as the QQ-plot of zombies_killed and years_of_education.i.e.**
+```{r}
+mypois<-rpois(n=1000,lambda = 3) #Assuming lambda =3 
+qqnorm(mypois); qqline(mypois,col="red")
+```
+
+####[5] Now use the sample() function to sample ONE subset of 30 zombies (without replacement) from this population and calculate the mean and sample standard deviation for each variable. Also estimate the standard error for each variable and construct the 95% confidence interval for each mean. Note that for the variables that are not drawn from the normal distribution, you will need to base your estimate of the CIs on some different distribution.
+```{r}
+sample_pop_stat <- NULL #Defining the variable to store sample population stat
+# Defining a function to create random samples for various quant variables e.g. height
+sample_var <- function(var,n) 
+{
+  return (sample(var, size = n, replace = FALSE))
+}
+#Defining a function to calculate CI for mean for normal distributions
+standard_CI <- function(mean,se) 
+{
+  lower <- mean - qnorm((1 - .05)/2)*se
+  upper <- mean + qnorm((1 - .05/2))*se
+  return (c(lower,upper))
+}
+#Defining sample size
+sampleSize <- 30
+#Generating random samples and computing mean, standard deviation, standard error of the mean, and confidence intervals for all quantitative variables.
+#Height
+sample_height <- sample_var(height,sampleSize)
+mean_sample_height <- round(mean(sample_height),2)
+sd_sample_height <- round(sd(sample_height),2)
+se_height <- round(sd_sample_height/sqrt(length(sample_height)),2)
+ci_height <- standard_CI(mean_sample_height, se_height)
+
+#Weight
+sample_weight <- sample_var(weight,sampleSize)
+mean_sample_weight <- round(mean(sample_weight),2)
+sd_sample_weight <- round(sd(sample_weight),2)
+se_weight <- round(sd_sample_weight/sqrt(length(sample_weight)),2)
+ci_weight <- standard_CI(mean_sample_weight, se_weight)
+
+#Age
+sample_age <- sample_var(age,sampleSize)
+mean_sample_age <- round(mean(sample_age),2)
+sd_sample_age <- round(sd(sample_age),2)
+se_age <- round(sd_sample_age/sqrt(length(sample_age)),2)
+ci_age <- standard_CI(mean_sample_age, se_age)
+
+#Zombies Killed
+sample_zombies_killed <- sample_var(zombies_killed,sampleSize)
+mean_sample_zombies_killed <- round(mean(sample_zombies_killed),2)
+sd_sample_zombies_killed <- round(sd(sample_zombies_killed),2)
+se_zombies_killed <- round(sd_sample_zombies_killed/sqrt(length(sample_zombies_killed)),2)
+#Calculating CI for poisson distribution mean via bootstraping
+z<-NULL
+for (i in 1:10000){
+  z[i] <- mean(sample(sample_zombies_killed,length(sample_zombies_killed),replace = TRUE))
+}
+ci_zombies_killed <- quantile(z,c(.025,0.95))
+
+#Years of Education
+sample_years_of_education <- sample_var(years_of_education,sampleSize)
+mean_sample_years_of_education <- round(mean(sample_years_of_education),2)
+sd_sample_years_of_education <- round(sd(sample_years_of_education),2)
+se_years_of_education<- round(sd_sample_years_of_education/sqrt(length(sample_years_of_education)),2)
+#Calculating CI for poisson distribution mean via bootstraping
+y<-NULL
+for (i in 1:10000){
+  y[i] <- mean(sample(sample_years_of_education,length(sample_years_of_education),replace = TRUE))
+}
+ci_years_of_education <- quantile(y,c(.025,0.95))
+#Results
+sample_pop_stat <- data.frame(SAM_POP_STAT = c("MEAN","SD","SE","CI"), HEIGHT = c(mean_sample_height, sd_sample_height, se_height, toString(round(ci_height,2))), WEIGHT = c(mean_sample_weight, sd_sample_weight, se_weight, toString(round(ci_weight,2))),AGE = c(mean_sample_age, sd_sample_age, se_age, toString(round(ci_age,2))),Z_KILL = c(mean_sample_zombies_killed, sd_sample_zombies_killed, se_zombies_killed, toString(round(ci_zombies_killed,2))),Y_ED = c(mean_sample_years_of_education, sd_sample_years_of_education, se_years_of_education, toString(round(ci_years_of_education,2))))
+sample_pop_stat
+```
+####[6] Now drawn 99 more random samples of 30 zombies out and calculate the mean for each of the these samples. Together with the first sample you drew out, you now have a set of 100 means for each variable (each based on 30 observations), which constitutes a sampling distribution for each variable. What are the means and standard deviations of this distribution for each variable? How do the standard deviations compare to the standard errors estimated in [5]? What do these sampling distributions look like? Are they normally distributed? What about for those variables that you concluded were not originally drawn from a normal distribution?
+```{r}
+mean_multi_sample_stat<-NULL
+mean_multi_sample_height<-NULL
+mean_multi_sample_weight<-NULL
+mean_multi_sample_age<-NULL
+mean_multi_sample_zombies_killed<-NULL
+mean_multi_sample_years_of_education<-NULL
+for(i in 1:99){
+  mean_multi_sample_height[i]<-mean(sample_var(height,sampleSize)) #Mean of random samples of heights 
+  mean_multi_sample_weight[i]<-mean(sample_var(weight,sampleSize)) #Mean of random samples of weights
+  mean_multi_sample_age[i]<-mean(sample_var(age,sampleSize)) #Mean of random samples of age
+  mean_multi_sample_zombies_killed[i]<-mean(sample_var(zombies_killed,sampleSize)) #Mean of random samples of zombies killed
+  mean_multi_sample_years_of_education[i]<-mean(sample_var(years_of_education,sampleSize)) #Mean of random samples of years of education
+}
+mean_multi_sample_height[100]<-mean_sample_height
+mean_multi_sample_weight[100]<-mean_sample_weight
+mean_multi_sample_age[100]<-mean_sample_age
+mean_multi_sample_zombies_killed[100]<-mean_sample_zombies_killed
+mean_multi_sample_years_of_education[100]<-mean_sample_years_of_education
+
+#Mean and Standard Error of the sampling distributions
+#where mean = mean of all possible means of sample size = SampleSize
+#and standard deviation of the sampling distribution = standard error
+mean_of_mean_ms_height <- mean(mean_multi_sample_height) 
+sd_of_mean_ms_height <- sd_height/sqrt(sampleSize)
+
+mean_of_mean_ms_weight <- mean(mean_multi_sample_weight)
+sd_of_mean_ms_weight <- sd_weight/sqrt(sampleSize)
+
+mean_of_mean_ms_age <- mean(mean_multi_sample_age)
+sd_of_mean_ms_age <- sd_age/sqrt(sampleSize)
+
+mean_of_mean_ms_zombies_killed <- mean(mean_multi_sample_zombies_killed)
+sd_of_mean_ms_zombies_killed <- sd_zombies_killed/sqrt(sampleSize)
+
+mean_of_mean_ms_years_of_education <- mean(mean_multi_sample_years_of_education)
+sd_of_mean_ms_years_of_education <- sd_years_of_education/sqrt(sampleSize)
+
+mean_multi_sample_stat<-data.frame(MULTI_SAM_STAT=c("MEAN","SD/SE"),HEIGHT = c(mean_of_mean_ms_height,sd_of_mean_ms_height),WEIGHT = c(mean_of_mean_ms_weight,sd_of_mean_ms_weight),AGE = c(mean_of_mean_ms_age,sd_of_mean_ms_age),Z_KILL = c(mean_of_mean_ms_zombies_killed,sd_of_mean_ms_zombies_killed),Y_ED = c(mean_of_mean_ms_years_of_education,sd_of_mean_ms_years_of_education))
+#Results
+mean_multi_sample_stat
+
+#Comparing standard error of the mean in [5] against standard error of the sampling distribution in [6]
+comp<-NULL
+comp<-data.frame(COMP=c("S.Err.Mean","S.Dev.Sam.Dist./S.Err."), HEIGHT = c(se_height,sd_of_mean_ms_height), WEIGHT = c(se_weight,sd_of_mean_ms_weight), AGE = c(se_age,sd_of_mean_ms_age), Z_KILL = c(se_zombies_killed,sd_of_mean_ms_zombies_killed), Y_ED = c(se_years_of_education,sd_of_mean_ms_years_of_education))
+comp
+```
+**Standard error of the mean is not equal to the standard error/standard deviation of the sampling distribution but is close to it and hence can be used as an estimator.**
+```{r}
+
+#Plotting the sampling distributions
+par(mfrow = c(2,3))
+hist(mean_multi_sample_height,freq = FALSE, main = "Sampling Distribution-Heights",xlab = "")
+hist(mean_multi_sample_weight,freq = FALSE,main = "Sampling Distribution-Weights",xlab = "")
+hist(mean_multi_sample_age,freq = FALSE,main = "Sampling Distribution-Age",xlab = "")
+hist(mean_multi_sample_zombies_killed,freq = FALSE,main = "Samp. Dist.-ZombiesKilled",xlab = "")
+hist(mean_multi_sample_years_of_education,freq = FALSE,main = "Samp. Dist.-YearsOfEducation",xlab = "")
+par(mfrow = c(2, 3))
+#Are these sampling distributions normally distributed
+qqnorm(mean_multi_sample_height, main = "QQPlot-Samp. Dist. Heights"); qqline(mean_multi_sample_height, col="red")
+qqnorm(mean_multi_sample_weight, main = "QQPlot-Samp. Dist. Weights"); qqline(mean_multi_sample_weight, col="red")
+qqnorm(mean_multi_sample_age, main = "QQPlot-Samp. Dist. Age"); qqline(mean_multi_sample_age, col="red")
+qqnorm(mean_multi_sample_zombies_killed, main = "QQPlot-Samp. Dist. Zom. killed"); qqline(mean_multi_sample_zombies_killed, col="red")
+qqnorm(mean_multi_sample_years_of_education, main = "QQPlot-Samp. Dist. Years education"); qqline(mean_multi_sample_years_of_education, col="red")
+```
+
+
+**The sampling distributions of all the quantitative variables are normally distributed.This is the practical realisation of "central limit theorum".**
